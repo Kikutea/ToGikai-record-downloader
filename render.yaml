@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: togikai-record-extractor
+    runtime: python
+    region: singapore
+    plan: free
+    buildCommand: "python3 -m compileall app"
+    startCommand: "python3 app/webui.py"
+    autoDeployTrigger: commit
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: HOST
+        value: 0.0.0.0
