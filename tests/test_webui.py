@@ -18,7 +18,9 @@ class WebUITest(unittest.TestCase):
         self.assertIn("抽出に失敗しました", page)
         self.assertIn('value="abc"', page)
         self.assertIn("本人発言のみ", page)
-        self.assertIn('value="上田令子"', page)
+        self.assertIn('<select id="speaker-name" name="speaker_name">', page)
+        self.assertIn('<option value="上田令子" selected>上田令子</option>', page)
+        self.assertNotIn("datalist", page)
 
     @patch("app.webui.extract_from_source")
     def test_build_result_payload_contains_all_formats(self, mock_extract) -> None:

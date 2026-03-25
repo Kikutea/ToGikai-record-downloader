@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
+from app.extractor import ExtractionError
 from app.search import (
     SearchResult,
     parse_search_results,
@@ -66,6 +67,12 @@ class SearchTest(unittest.TestCase):
         option = resolve_speaker_option("上田令子", options)
 
         self.assertEqual(option.speaker_id, "492")
+
+    def test_resolve_speaker_option_rejects_unsupported_speaker(self) -> None:
+        options = parse_speaker_options(SPEAKER_HTML)
+
+        with self.assertRaisesRegex(ExtractionError, "さんのへあや / 上田令子 のみ選択できます"):
+            resolve_speaker_option("小池百合子", options)
 
     def test_parse_search_results(self) -> None:
         results = parse_search_results(RESULTS_HTML)

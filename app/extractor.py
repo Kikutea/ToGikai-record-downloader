@@ -17,6 +17,7 @@ from urllib.request import Request, urlopen
 
 
 DEFAULT_SPEAKER_NAME = "さんのへあや"
+SUPPORTED_SPEAKERS = ("さんのへあや", "上田令子")
 
 KNOWN_SPEAKER_ALIASES: dict[str, tuple[str, ...]] = {
     "さんのへあや": (
@@ -310,11 +311,16 @@ def normalize_speaker_name(speaker_name: str) -> str:
     return speaker_name
 
 
-def build_target_aliases(speaker_name: str) -> tuple[str, ...]:
+def validate_supported_speaker(speaker_name: str) -> str:
     normalized_name = normalize_speaker_name(speaker_name)
-    if not normalized_name:
-        raise ExtractionError("発言者名を指定してください")
+    if normalized_name not in SUPPORTED_SPEAKERS:
+        supported = " / ".join(SUPPORTED_SPEAKERS)
+        raise ExtractionError(f"発言者は {supported} のみ選択できます")
+    return normalized_name
 
+
+def build_target_aliases(speaker_name: str) -> tuple[str, ...]:
+    normalized_name = validate_supported_speaker(speaker_name)
     aliases = {normalized_name}
     if normalized_name in KNOWN_SPEAKER_ALIASES:
         aliases.update(KNOWN_SPEAKER_ALIASES[normalized_name])
@@ -512,7 +518,7 @@ def build_extracted_document_for_speaker(
     target_speaker: str,
 ) -> ExtractedDocument:
     meeting_name = format_meeting_name(document.raw_title)
-    normalized_target = normalize_speaker_name(target_speaker)
+    normalized_target = validate_supported_speaker(target_speaker)
     return ExtractedDocument(
         title=build_published_title(document.raw_title, document.date_iso),
         date_iso=document.date_iso,
@@ -589,6 +595,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--speaker",
         default=DEFAULT_SPEAKER_NAME,
+        choices=SUPPORTED_SPEAKERS,
         help="抽出対象の発言者名。例: さんのへあや, 上田令子",
     )
     parser.add_argument(

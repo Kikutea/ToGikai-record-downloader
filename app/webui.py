@@ -15,16 +15,17 @@ if __package__ in {None, ""}:
 from app.extractor import (
     DEFAULT_SPEAKER_NAME,
     ExtractionError,
+    SUPPORTED_SPEAKERS,
     extract_from_source,
     render_html,
     render_markdown,
     render_text,
+    validate_supported_speaker,
 )
 from app.search import SearchResult, search_documents_by_speaker
 
 
 APP_TITLE = "都議会発言抽出ツール"
-SPEAKER_SUGGESTIONS = ("さんのへあや", "上田令子")
 DEFAULT_SEARCH_FILTER = ""
 DEFAULT_SEARCH_PAGES = 3
 
@@ -55,8 +56,8 @@ def render_page(
     search_results: list[SearchResult] | None = None,
     search_error: str = "",
 ) -> str:
+    speaker_name = normalize_selected_speaker(speaker_name)
     source_value = html.escape(source, quote=True)
-    speaker_value = html.escape(speaker_name, quote=True)
     search_filter_value = html.escape(search_filter, quote=True)
     error_html = (
         f'<div class="notice notice-error">{html.escape(error)}</div>' if error else ""
@@ -381,7 +382,7 @@ def render_page(
     <section class="hero">
       <div class="eyebrow">Tokyo Metropolitan Assembly Record Helper</div>
       <h1><a class="home-link" href="/">{APP_TITLE}</a></h1>
-      <p class="lead">発言者名を選んで会議録候補を一覧から選ぶか、本文 URL を直接貼り付けるだけで、WordPress 用 HTML をすぐに作れます。</p>
+      <p class="lead">さんのへあや議員と上田令子議員の二人専用です。会議録候補を一覧から選ぶか、本文 URL を直接貼り付けるだけで、WordPress 用 HTML をすぐに作れます。</p>
     </section>
     <section class="card form-card">
       {search_error_html}
@@ -389,7 +390,7 @@ def render_page(
         <div class="two-col">
           <div>
             <label for="search-speaker-name">発言者名</label>
-            <input id="search-speaker-name" list="speaker-suggestions" type="text" name="speaker_name" value="{speaker_value}" placeholder="さんのへあや" required>
+            <select id="search-speaker-name" name="speaker_name">{render_speaker_options(speaker_name)}</select>
           </div>
           <div>
             <label for="search-filter">文書名の絞り込み</label>
@@ -422,7 +423,7 @@ def render_page(
         <div class="two-col">
           <div>
             <label for="speaker-name">抽出対象の発言者名</label>
-            <input id="speaker-name" list="speaker-suggestions" type="text" name="speaker_name" value="{speaker_value}" placeholder="さんのへあや" required>
+            <select id="speaker-name" name="speaker_name">{render_speaker_options(speaker_name)}</select>
           </div>
           <div>
             <label for="source">会議録 URL またはローカル HTML ファイル</label>
@@ -439,7 +440,7 @@ def render_page(
         <div class="actions">
           <button type="submit">抽出する</button>
           <button type="button" class="secondary" onclick="fillSample()">サンプルを入れる</button>
-          <span class="hint">例: さんのへあや / 上田令子。確認用 URL は `Id=19672` です。</span>
+          <span class="hint">対象議員は二人固定です。確認用 URL は `Id=19672` です。</span>
         </div>
       </form>
     </section>
@@ -448,9 +449,6 @@ def render_page(
       ローカル PC 上で動かす前提です。公開サーバーではなく、事務所の作業用ブラウザから使う想定にしています。
     </div>
   </main>
-  <datalist id="speaker-suggestions">
-    {render_speaker_suggestions()}
-  </datalist>
   <script>
     function copyText(id) {{
       const target = document.getElementById(id);
@@ -474,11 +472,21 @@ def render_page(
 """
 
 
-def render_speaker_suggestions() -> str:
-    return "\n".join(
-        f'<option value="{html.escape(name, quote=True)}"></option>'
-        for name in SPEAKER_SUGGESTIONS
-    )
+def normalize_selected_speaker(speaker_name: str) -> str:
+    try:
+        return validate_supported_speaker(speaker_name)
+    except ExtractionError:
+        return DEFAULT_SPEAKER_NAME
+
+
+def render_speaker_options(selected_name: str) -> str:
+    normalized_selected = normalize_selected_speaker(selected_name)
+    options = []
+    for name in SUPPORTED_SPEAKERS:
+        selected_attr = " selected" if name == normalized_selected else ""
+        escaped_name = html.escape(name, quote=True)
+        options.append(f'<option value="{escaped_name}"{selected_attr}>{escaped_name}</option>')
+    return "".join(options)
 
 
 def render_option(value: int, selected: int) -> str:

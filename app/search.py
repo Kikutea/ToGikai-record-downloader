@@ -7,7 +7,13 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from app.extractor import ExtractionError, clean_inline_text, normalize_speaker_name, normalize_text
+from app.extractor import (
+    ExtractionError,
+    clean_inline_text,
+    normalize_speaker_name,
+    normalize_text,
+    validate_supported_speaker,
+)
 
 
 SEARCH_BASE_URL = "https://www.record.gikai.metro.tokyo.lg.jp/100000"
@@ -55,7 +61,8 @@ def resolve_speaker_option(
     speaker_name: str,
     options: list[SpeakerOption],
 ) -> SpeakerOption:
-    target = normalize_speaker_name(speaker_name)
+    target_name = validate_supported_speaker(speaker_name)
+    target = normalize_speaker_name(target_name)
     exact_matches = [
         option for option in options if normalize_speaker_name(option.label) == target
     ]
@@ -68,7 +75,7 @@ def resolve_speaker_option(
     if partial_matches:
         return partial_matches[0]
 
-    raise ExtractionError(f"会議録サイトで発言者「{speaker_name}」が見つかりませんでした")
+    raise ExtractionError(f"会議録サイトで発言者「{target_name}」が見つかりませんでした")
 
 
 def parse_csrf_token(html_text: str) -> str:
